@@ -11,23 +11,33 @@ logger.debug(f"Using device: {DEVICE}")
 
 def loadmodel() -> torch.nn.Module:
     repo = "isl-org/ZoeDepth"
-    torch.hub.set_dir("ZoeDepth")
+    torch.hub.set_dir("lse/ZoeDepth")
     model_zoe_n = torch.hub.load(repo, "ZoeD_NK", pretrained=True)
     zoe = model_zoe_n.to(DEVICE)
     return zoe
 
 
 def depth_predict(
-    zoe: torch.nn.Module, image: str, is_save: bool = False
+    zoe: torch.nn.Module,
+    image: str,
+    is_save: bool = False,
+    output_path: str = "lse/assert/output_depth.png",
 ) -> torch.Tensor:
     image_PIL = Image.open(image).convert("RGB")  # load
     depth_tensor = zoe.infer_pil(image_PIL, output_type="tensor")  # as torch tensor
     if is_save:
         colored = colorize(depth_tensor)
-        fpath_colored = "output_colored.png"
-        Image.fromarray(colored).save(fpath_colored)
+        Image.fromarray(colored).save(output_path)
 
     return depth_tensor
+
+
+# def colored_predict(zoe: torch.nn.Module, image: str) -> Image.Image:
+#     image_PIL = Image.open(image).convert("RGB")  # load
+#     depth_tensor = zoe.infer_pil(image_PIL, output_type="tensor")  # as torch tensor
+#     colored = colorize(depth_tensor)
+#     image = Image.fromarray(colored)
+#     return image
 
 
 def process_directory(
@@ -119,8 +129,3 @@ def process_directory(
         logger.info(f"  - 递归处理目录: {stats['dirs']} 个")
 
     return stats
-
-
-model = loadmodel()
-
-process_directory(model, "深度图", "output")
