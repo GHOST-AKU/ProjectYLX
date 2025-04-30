@@ -1,11 +1,11 @@
-import numpy as np
-from PIL import Image
-from scipy.stats import entropy
-from skimage.color import rgb2gray
-from skimage.filters.rank import entropy as local_entropy
-from skimage.morphology import disk
+import numpy as np # 用于数值计算
+from PIL import Image # 用于图像处理
+from scipy.stats import entropy # 用于计算香农熵
+from skimage.color import rgb2gray # 用于将RGB图像转为灰度图
+from skimage.filters.rank import entropy as local_entropy # 用于计算局部熵
+from skimage.morphology import disk # 用于创建结构元素
 import cv2  # 用于边缘检测
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # 用于可视化
 
 # ----------------------------
 # 将彩色图像转为标准化灰度图（值在0~1之间）
@@ -40,6 +40,20 @@ def extract_local_entropy_stats(local_map):
         "局部熵90分位数": np.percentile(local_map, 90),
         "局部熵中位数": np.median(local_map),
     }
+# ----------------------------
+# 计算高熵区域比例（局部熵大于某个分位数的像素占比）
+# ----------------------------
+def compute_high_entropy_ratio(local_map, percentile=80):
+    threshold = np.percentile(local_map, percentile)
+    return np.mean(local_map > threshold)
+
+# ----------------------------
+# 计算局部熵直方图（用于可视化）
+# ----------------------------
+def compute_entropy_histogram(local_map, bins=5):
+    hist, _ = np.histogram(local_map, bins=bins, range=(0, np.max(local_map)))
+    hist = hist / hist.sum() if hist.sum() > 0 else hist
+    return hist.tolist()
 
 # ----------------------------
 # 计算边缘密度（图像中结构线条所占比例）
@@ -63,6 +77,8 @@ def extract_entropy_features(image_path):
     edge_density = compute_edge_density(gray)        # 计算边缘密度
     local_stats = extract_local_entropy_stats(local_map)  # 提取局部熵统计特征
     LEDI = local_stats["局部熵均值"] / H_global       # LEDI指标 = 局部熵均值 / 全局熵
+    high_entropy_ratio = compute_high_entropy_ratio(local_map)    # 计算高熵区域比例
+    entropy_hist_vector = compute_entropy_histogram(local_map, bins=5)   # 计算局部熵直方图
 
     # 汇总所有特征
     features = {
